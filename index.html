@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Floating Chatbot</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+    }
+
+    /* Floating Chat Button */
+    #chat-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      font-size: 26px;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      z-index: 1000;
+    }
+
+    /* Chatbot Container */
+    #chat-container {
+      display: none;
+      flex-direction: column;
+      position: fixed;
+      bottom: 90px;
+      right: 20px;
+      width: 360px;
+      height: 500px;
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.25);
+      z-index: 999;
+      overflow: hidden;
+    }
+
+    #chat-header {
+      background-color: #007bff;
+      color: white;
+      padding: 12px;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    #chat-body {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+      background-color: #f9f9f9;
+    }
+
+    #chat-input {
+      display: flex;
+      border-top: 1px solid #ccc;
+    }
+
+    #user-input {
+      flex: 1;
+      padding: 10px;
+      font-size: 15px;
+      border: none;
+      outline: none;
+    }
+
+    #send-btn {
+      padding: 10px 15px;
+      background-color: #007bff;
+      border: none;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .message {
+      padding: 10px 14px;
+      border-radius: 18px;
+      font-size: 15px;
+      max-width: 80%;
+      word-wrap: break-word;
+      display: inline-block;
+    }
+
+    .user {
+      background-color: #dcf8c6;
+      color: #000;
+      text-align: right;
+    }
+
+    .bot {
+      background-color: #e2e2e2;
+      color: #000;
+      text-align: left;
+    }
+
+    /* Loading Dots */
+    .loading-dots {
+      display: inline-block;
+      width: 40px;
+      text-align: left;
+    }
+
+    .loading-dots span {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      margin: 0 2px;
+      background-color: #007bff;
+      border-radius: 50%;
+      animation: loading 1.4s infinite ease-in-out both;
+    }
+
+    .loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+    .loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes loading {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Floating Chat Button -->
+<button id="chat-toggle">💬</button>
+
+<!-- Chatbot UI -->
+<div id="chat-container">
+  <div id="chat-header">Assistant</div>
+  <div id="chat-body"></div>
+  <div id="chat-input">
+    <input type="text" id="user-input" placeholder="Type a message...">
+    <button id="send-btn">Send</button>
+  </div>
+</div>
+
+<script>
+  const toggleBtn = document.getElementById('chat-toggle');
+  const chatContainer = document.getElementById('chat-container');
+  const chatBody = document.getElementById('chat-body');
+  const userInput = document.getElementById('user-input');
+  const sendBtn = document.getElementById('send-btn');
+
+  toggleBtn.addEventListener('click', () => {
+    const visible = chatContainer.style.display === 'flex';
+    chatContainer.style.display = visible ? 'none' : 'flex';
+  });
+
+  sendBtn.addEventListener('click', sendMessage);
+  userInput.addEventListener('keypress', function (e) {
+    if (e.key === 'Enter') sendMessage();
+  });
+
+  async function sendMessage() {
+    const message = userInput.value.trim();
+    if (!message) return;
+
+    appendMessage('user', message);
+    userInput.value = '';
+
+    // Show loading
+    const loaderWrapper = document.createElement('div');
+    loaderWrapper.style.display = 'flex';
+    loaderWrapper.style.justifyContent = 'flex-start';
+    loaderWrapper.style.marginBottom = '5px';
+
+    const loader = document.createElement('div');
+    loader.className = 'message bot';
+    loader.innerHTML = `
+      <div class="loading-dots">
+        <span></span><span></span><span></span>
+      </div>`;
+    loaderWrapper.appendChild(loader);
+    chatBody.appendChild(loaderWrapper);
+    chatBody.scrollTop = chatBody.scrollHeight;
+
+    try {
+      const response = await fetch('http://127.0.0.1:8000/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message })
+      });
+      const data = await response.json();
+      loaderWrapper.remove();
+      appendMessage('bot', data.response);
+    } catch (error) {
+      loaderWrapper.remove();
+      appendMessage('bot', '❌ Could not reach the bot.');
+    }
+  }
+
+  function appendMessage(sender, text) {
+    const wrapper = document.createElement('div');
+    wrapper.style.display = 'flex';
+    wrapper.style.justifyContent = sender === 'user' ? 'flex-end' : 'flex-start';
+    wrapper.style.marginBottom = '5px';
+
+    const bubble = document.createElement('div');
+    bubble.className = `message ${sender}`;
+    bubble.textContent = text;
+
+    wrapper.appendChild(bubble);
+    chatBody.appendChild(wrapper);
+    chatBody.scrollTop = chatBody.scrollHeight;
+  }
+</script>
+
+</body>
+</html>
